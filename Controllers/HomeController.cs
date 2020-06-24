@@ -10,6 +10,7 @@ namespace MyCourse.Controllers
     {
         public IActionResult Index()
         {
+            ViewData["Title"] = "Home Page WebApp";
             return View();
         }
     }
