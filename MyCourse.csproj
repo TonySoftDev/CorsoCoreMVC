@@ -2,11 +2,12 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp2.2</TargetFramework>
   </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="Models\Services\Application\CourseService.cs" />
+  </ItemGroup>
 
   <ItemGroup>
     <Folder Include="Controllers\" />
-    <Folder Include="Data\" />
-    <Folder Include="Models\Services\Infrastructure\" />
     <Folder Include="wwwroot\images\" />
   </ItemGroup>
 
