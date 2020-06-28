@@ -1,4 +1,5 @@
-﻿using MyCourse.Models.Enums;
+﻿using MyCourse.Models.Entities;
+using MyCourse.Models.Enums;
 using MyCourse.Models.ValueTypes;
 using System;
 using System.Collections.Generic;
@@ -38,5 +39,20 @@ namespace MyCourse.Models.ViewModels
             };
             return courseViewModel;
         }
+
+        public static CourseViewModel FromEntity(Course course)
+        {
+            return new CourseViewModel
+            {
+                Id = course.Id,
+                Title = course.Title,
+                ImagePath = course.ImagePath,
+                Author = course.Author,
+                Rating = course.Rating,
+                CurrentPrice = course.CurrentPrice,
+                FullPrice = course.FullPrice
+            };
+        }
+
     }
 }

@@ -1,3 +1,4 @@
+using MyCourse.Models.Entities;
 using System;
 using System.Data;
 
@@ -20,6 +21,17 @@ namespace MyCourse.Models.ViewModels
                 Duration = TimeSpan.Parse(Convert.ToString(lessonRow["Duration"])),
             };
             return lessonViewModel;
+        }
+
+        public static LessonViewModel FromEntity(Lesson lesson)
+        {
+            return new LessonViewModel
+            {
+                Id = lesson.Id,
+                Title = lesson.Title,
+                Duration = lesson.Duration,
+                Description = lesson.Description
+            };
         }
     }
 }
