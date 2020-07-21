@@ -1,4 +1,8 @@
-﻿using MyCourse.Models.Services.Infrastructure;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using MyCourse.Models.Exceptions;
+using MyCourse.Models.Options;
+using MyCourse.Models.Services.Infrastructure;
 using MyCourse.Models.ViewModels;
 using System;
 using System.Collections.Generic;
@@ -10,15 +14,21 @@ namespace MyCourse.Models.Services.Application
 {
     public class AdoNetCourseService : ICourseService
     {
+        private readonly ILogger<AdoNetCourseService> logger;
         private readonly IDatabaseAccessor db;
+        private readonly IOptionsMonitor<CoursesOptions> coursesOptions;
 
-        public AdoNetCourseService(IDatabaseAccessor db)
+        public AdoNetCourseService(ILogger<AdoNetCourseService> logger, IDatabaseAccessor db, IOptionsMonitor<CoursesOptions> coursesOptions)
         {
+            this.logger = logger;
             this.db = db;
+            this.coursesOptions = coursesOptions;
         }
 
         public async Task<CourseDetailViewModel> GetCourseAsync(int id)
         {
+            logger.LogInformation("Course {id} requested", id);
+
             FormattableString query = $@"SELECT Id, Title, Description, ImagePath, Author, Rating, FullPrice_Amount, 
                                                 FullPrice_Currency, CurrentPrice_Amount, CurrentPrice_Currency 
                                         FROM Courses WHERE Id={id}; 
@@ -29,7 +39,8 @@ namespace MyCourse.Models.Services.Application
             var courseTable = dataSet.Tables[0];
             if (courseTable.Rows.Count != 1)
             {
-                throw new InvalidOperationException($"Did not return exactly 1 row for Course {id}");
+                logger.LogWarning("Course {id} not found", id);
+                throw new CourseNotFoundException(id);
             }
             var courseRow = courseTable.Rows[0];
             var courseDetailViewModel = CourseDetailViewModel.FromDataRow(courseRow);
