@@ -1,4 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using MyCourse.Models.Entities;
+using MyCourse.Models.Exceptions;
+using MyCourse.Models.InputModels;
+using MyCourse.Models.Options;
 using MyCourse.Models.Services.Infrastructure;
 using MyCourse.Models.ViewModels;
 using System;
@@ -10,11 +16,15 @@ namespace MyCourse.Models.Services.Application
 {
     public class EfCoreCourseService : ICourseService
     {
+        private readonly ILogger<EfCoreCourseService> logger;
         private readonly MyCourseDbContext dbContext;
+        private readonly IOptionsMonitor<CoursesOptions> coursesOptions;
 
-        public EfCoreCourseService(MyCourseDbContext dbContext)
+        public EfCoreCourseService(ILogger<EfCoreCourseService> logger, MyCourseDbContext dbContext, IOptionsMonitor<CoursesOptions> coursesOptions)
         {
+            this.logger = logger;
             this.dbContext = dbContext;
+            this.coursesOptions = coursesOptions;
         }
 
         public async Task<CourseDetailViewModel> GetCourseAsync(int id)
@@ -26,6 +36,11 @@ namespace MyCourse.Models.Services.Application
                 .Select(course => CourseDetailViewModel.FromEntity(course)); //Usando metodi statici come FromEntity, la query potrebbe essere inefficiente. Mantenere il mapping nella lambda oppure usare un extension method personalizzato
 
             CourseDetailViewModel viewModel = await queryLinq.SingleAsync();
+            if (viewModel == null)
+            {
+                logger.LogWarning("Course {id} not found", id);
+                throw new CourseNotFoundException(id);
+            }
             //.FirstOrDefaultAsync(); //Restituisce null se l'elenco è vuoto e non solleva mai un'eccezione
             //.SingleOrDefaultAsync(); //Tollera il fatto che l'elenco sia vuoto e in quel caso restituisce null, oppure se l'elenco contiene più di 1 elemento, solleva un'eccezione
             //.FirstAsync(); //Restituisce il primo elemento, ma se l'elenco è vuoto solleva un'eccezione
@@ -33,15 +48,104 @@ namespace MyCourse.Models.Services.Application
             return viewModel;
         }
 
-        public async Task<List<CourseViewModel>> GetCoursesAsync()
+        public async Task<List<CourseViewModel>> GetBestRatingCoursesAsync()
         {
-            IQueryable<CourseViewModel> queryLinq = dbContext.Courses
+            CourseListInputModel inputModel = new CourseListInputModel(
+                search: "",
+                page: 1,
+                orderby: "Rating",
+                ascending: false,
+                limit: coursesOptions.CurrentValue.InHome,
+                orderOptions: coursesOptions.CurrentValue.Order);
+
+            ListViewModel<CourseViewModel> result = await GetCoursesAsync(inputModel);
+            return result.Results;
+        }
+
+        public async Task<List<CourseViewModel>> GetMostRecentCoursesAsync()
+        {
+            CourseListInputModel inputModel = new CourseListInputModel(
+                search: "",
+                page: 1,
+                orderby: "Id",
+                ascending: false,
+                limit: coursesOptions.CurrentValue.InHome,
+                orderOptions: coursesOptions.CurrentValue.Order);
+
+            ListViewModel<CourseViewModel> result = await GetCoursesAsync(inputModel);
+            return result.Results;
+        }
+
+
+        public async Task<ListViewModel<CourseViewModel>> GetCoursesAsync(CourseListInputModel model)
+        {
+            IQueryable<Course> baseQuery = dbContext.Courses;
+
+            switch (model.OrderBy)
+            {
+                case "Title":
+                    if (model.Ascending)
+                    {
+                        baseQuery = baseQuery.OrderBy(course => course.Title);
+                    }
+                    else
+                    {
+                        baseQuery = baseQuery.OrderByDescending(course => course.Title);
+                    }
+                    break;
+                case "Rating":
+                    if (model.Ascending)
+                    {
+                        baseQuery = baseQuery.OrderBy(course => course.Rating);
+                    }
+                    else
+                    {
+                        baseQuery = baseQuery.OrderByDescending(course => course.Rating);
+                    }
+                    break;
+                case "CurrentPrice":
+                    if (model.Ascending)
+                    {
+                        baseQuery = baseQuery.OrderBy(course => course.CurrentPrice.Amount);
+                    }
+                    else
+                    {
+                        baseQuery = baseQuery.OrderByDescending(course => course.CurrentPrice.Amount);
+                    }
+                    break;
+                case "Id":
+                    if (model.Ascending)
+                    {
+                        baseQuery = baseQuery.OrderBy(course => course.Id);
+                    }
+                    else
+                    {
+                        baseQuery = baseQuery.OrderByDescending(course => course.Id);
+                    }
+                    break;
+            }
+
+            IQueryable<CourseViewModel> queryLinq = baseQuery
+                .Where(course => course.Title.Contains(model.Search))
+                .Skip(model.Offset)
+                .Take(model.Limit)
                 .AsNoTracking()
                 .Select(course => CourseViewModel.FromEntity(course)); //Usando metodi statici come FromEntity, la query potrebbe essere inefficiente. Mantenere il mapping nella lambda oppure usare un extension method personalizzato
 
-            List<CourseViewModel> courses = await queryLinq.ToListAsync(); //La query al database viene inviata qui, quando manifestiamo l'intenzione di voler leggere i risultati
+            List<CourseViewModel> courses = await queryLinq
+                .Skip(model.Offset)
+                .Take(model.Limit)
+                .ToListAsync(); //La query al database viene inviata qui, quando manifestiamo l'intenzione di voler leggere i risultati
 
-            return courses;
+            int totalCount = await queryLinq.CountAsync();
+
+            ListViewModel<CourseViewModel> result = new ListViewModel<CourseViewModel>
+            { 
+                Results = courses,
+                TotalCount = totalCount
+            };
+
+            return result;
         }
     }
 }

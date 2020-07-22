@@ -41,7 +41,6 @@ namespace MyCourse
 
             }).SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
 
-
             services.AddTransient<ICourseService, AdoNetCourseService>();
             //services.AddTransient<ICourseService, EfCoreCourseService>();
             services.AddTransient<IDatabaseAccessor, SqliteDatabaseAccessor>();
