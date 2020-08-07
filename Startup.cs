@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using MyCourse.Models.Options;
 using MyCourse.Models.Services.Application;
 using MyCourse.Models.Services.Infrastructure;
@@ -39,10 +40,14 @@ namespace MyCourse
                 Configuration.Bind("ResponseCache:Home", homeProfile);
                 options.CacheProfiles.Add("Home", homeProfile);
 
-            }).SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
+            }).SetCompatibilityVersion(CompatibilityVersion.Version_3_0)
+#if DEBUG
+            .AddRazorRuntimeCompilation()
+#endif
+            ;
 
-            services.AddTransient<ICourseService, AdoNetCourseService>();
-            //services.AddTransient<ICourseService, EfCoreCourseService>();
+            //services.AddTransient<ICourseService, AdoNetCourseService>();
+            services.AddTransient<ICourseService, EfCoreCourseService>();
             services.AddTransient<IDatabaseAccessor, SqliteDatabaseAccessor>();
             services.AddTransient<ICachedCourseService, MemoryCacheCourseService>();
 
@@ -59,7 +64,7 @@ namespace MyCourse
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             //if (env.IsDevelopment())
             if (env.IsEnvironment("Development"))
@@ -73,13 +78,20 @@ namespace MyCourse
 
             app.UseStaticFiles();
 
+            //Endpoint Routing Middleware
+            app.UseRouting();
+
             app.UseResponseCaching();
 
-            //app.UseMvcWithDefaultRoute();
-            app.UseMvc(routeBuilder =>
-            {
-                routeBuilder.MapRoute("default", "{controller=Home}/{action=Index}/{id?}");
+            app.UseEndpoints(routeBuilder => {
+                routeBuilder.MapControllerRoute("default", "{controller=Home}/{action=Index}/{id?}");
             });
+
+            //app.UseMvcWithDefaultRoute();
+            //app.UseMvc(routeBuilder =>
+            //{
+            //    routeBuilder.MapRoute("default", "{controller=Home}/{action=Index}/{id?}");
+            //});
             
             //app.Run(async (context) =>
             //{
