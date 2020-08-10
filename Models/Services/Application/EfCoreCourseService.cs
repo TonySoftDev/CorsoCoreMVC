@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MyCourse.Models.Entities;
@@ -18,12 +19,14 @@ namespace MyCourse.Models.Services.Application
     {
         private readonly ILogger<EfCoreCourseService> logger;
         private readonly MyCourseDbContext dbContext;
+        private readonly IImagePersister imagePersister;
         private readonly IOptionsMonitor<CoursesOptions> coursesOptions;
 
-        public EfCoreCourseService(ILogger<EfCoreCourseService> logger, MyCourseDbContext dbContext, IOptionsMonitor<CoursesOptions> coursesOptions)
+        public EfCoreCourseService(ILogger<EfCoreCourseService> logger, MyCourseDbContext dbContext, IImagePersister imagePersister, IOptionsMonitor<CoursesOptions> coursesOptions)
         {
             this.logger = logger;
             this.dbContext = dbContext;
+            this.imagePersister = imagePersister;
             this.coursesOptions = coursesOptions;
         }
 
@@ -186,5 +189,90 @@ namespace MyCourse.Models.Services.Application
             return result;
         }
 
+        public async Task<CourseDetailViewModel> CreateCourseAsync(CourseCreateInputModel inputModel)
+        {
+            string title = inputModel.Title;
+            string author = "Mario Rossi";
+
+            var course = new Course(title, author);
+            dbContext.Add(course);
+            try
+            {
+                await dbContext.SaveChangesAsync();
+            }
+            catch (DbUpdateException exc) when ((exc.InnerException as SqliteException)?.SqliteErrorCode == 19)
+            {
+                throw new CourseTitleUnavailableException(title, exc);
+            }
+
+            return CourseDetailViewModel.FromEntity(course);
+        }
+
+        public async Task<CourseDetailViewModel> EditCourseAsync(CourseEditInputModel inputModel)
+        {
+            Course course = await dbContext.Courses.FindAsync(inputModel.Id);
+
+            if (course == null)
+            {
+                throw new CourseNotFoundException(inputModel.Id);
+            }
+
+            course.ChangeTitle(inputModel.Title);
+            course.ChangePrices(inputModel.FullPrice, inputModel.CurrentPrice);
+            course.ChangeDescription(inputModel.Description);
+            course.ChangeEmail(inputModel.Email);
+
+            if (inputModel.Image != null)
+            {
+                try
+                {
+                    string imagePath = await imagePersister.SaveCourseImageAsync(inputModel.Id, inputModel.Image);
+                    course.ChangeImagePath(imagePath);
+                }
+                catch (Exception exc)
+                {
+                    throw new CourseImageInvalidException(inputModel.Id, exc);
+                }
+            }
+
+            dbContext.Update(course);
+
+            try
+            {
+                await dbContext.SaveChangesAsync();
+            }
+            catch (DbUpdateException exc) when ((exc.InnerException as SqliteException)?.SqliteErrorCode == 19)
+            {
+                throw new CourseTitleUnavailableException(inputModel.Title, exc);
+            }
+
+            return CourseDetailViewModel.FromEntity(course);
+        }
+
+
+        public async Task<bool> IsTitleAvailableAsync(string title, int id)
+        {
+            //await dbContext.Courses.AnyAsync(course => course.Title == title);
+            bool titleExists = await dbContext.Courses.AnyAsync(course => EF.Functions.Like(course.Title, title) && course.Id != id);
+            return !titleExists;
+        }
+
+        public async Task<CourseEditInputModel> GetCourseForEditingAsync(int id)
+        {
+            IQueryable<CourseEditInputModel> queryLinq = dbContext.Courses
+                .AsNoTracking()
+                .Where(course => course.Id == id)
+                .Select(course => CourseEditInputModel.FromEntity(course)); //Usando metodi statici come FromEntity, la query potrebbe essere inefficiente. Mantenere il mapping nella lambda oppure usare un extension method personalizzato
+
+            CourseEditInputModel viewModel = await queryLinq.FirstOrDefaultAsync();
+
+            if (viewModel == null)
+            {
+                logger.LogWarning("Course {id} not found", id);
+                throw new CourseNotFoundException(id);
+            }
+
+            return viewModel;
+        }
     }
 }
