@@ -33,6 +33,7 @@ namespace MyCourse.Models.Services.Infrastructure
                 entity.ToTable("Courses");
                 entity.HasKey(course => course.Id);
 
+                entity.HasIndex(course => course.Title).IsUnique();
                 entity.Property(course => course.RowVersion).IsRowVersion();
 
                 entity.OwnsOne(course => course.CurrentPrice, builder => {
