@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
-using MyCourse.Models.Exceptions;
+using MyCourse.Models.Exceptions.Application;
 
 namespace MyCourse.Controllers
 {
