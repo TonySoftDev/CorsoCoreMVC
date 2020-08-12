@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
@@ -14,7 +15,8 @@ using Microsoft.Extensions.Hosting;
 using MyCourse.Customizations.ModelBinders;
 using MyCourse.Models.Enums;
 using MyCourse.Models.Options;
-using MyCourse.Models.Services.Application;
+using MyCourse.Models.Services.Application.Courses;
+using MyCourse.Models.Services.Application.Lessons;
 using MyCourse.Models.Services.Infrastructure;
 
 namespace MyCourse
@@ -56,11 +58,13 @@ namespace MyCourse
             {
                 case Persistence.AdoNet:
                     services.AddTransient<ICourseService, AdoNetCourseService>();
+                    services.AddTransient<ILessonService, AdoNetLessonService>();
                     services.AddTransient<IDatabaseAccessor, SqliteDatabaseAccessor>();
                     break;
 
                 case Persistence.EfCore:
                     services.AddTransient<ICourseService, EfCoreCourseService>();
+                    services.AddTransient<ILessonService, EfCoreLessonService>();
                     services.AddDbContextPool<MyCourseDbContext>(optionsBuilder => {
                         string connectionString = Configuration.GetSection("ConnectionStrings").GetValue<string>("Default");
                         optionsBuilder.UseSqlite(connectionString);
@@ -69,12 +73,14 @@ namespace MyCourse
             }
 
             services.AddTransient<ICachedCourseService, MemoryCacheCourseService>();
+            services.AddTransient<ICachedLessonService, MemoryCacheLessonService>();
             services.AddSingleton<IImagePersister, MagickNetImagePersister>();
 
             //Options
             services.Configure<ConnectionStringsOptions>(Configuration.GetSection("ConnectionStrings"));
             services.Configure<CoursesOptions>(Configuration.GetSection("Courses"));
             services.Configure<MemoryCacheOptions>(Configuration.GetSection("MemoryCache"));
+            services.Configure<KestrelServerOptions>(Configuration.GetSection("Kestrel"));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -109,17 +115,6 @@ namespace MyCourse
                 routeBuilder.MapControllerRoute("default", "{controller=Home}/{action=Index}/{id?}");
             });
 
-            //app.UseMvcWithDefaultRoute();
-            //app.UseMvc(routeBuilder =>
-            //{
-            //    routeBuilder.MapRoute("default", "{controller=Home}/{action=Index}/{id?}");
-            //});
-            
-            //app.Run(async (context) =>
-            //{
-            //    string nome = context.Request.Query["nome"];
-            //    await context.Response.WriteAsync($"Hello {nome}!");
-            //});
         }
     }
 }

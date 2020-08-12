@@ -2,7 +2,7 @@ using MyCourse.Models.Entities;
 using System;
 using System.Data;
 
-namespace MyCourse.Models.ViewModels
+namespace MyCourse.Models.ViewModels.Lessons
 {
     public class LessonViewModel
     {

@@ -4,9 +4,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using MyCourse.Models.Exceptions.Application;
-using MyCourse.Models.InputModels;
-using MyCourse.Models.Services.Application;
+using MyCourse.Models.InputModels.Courses;
+using MyCourse.Models.Services.Application.Courses;
 using MyCourse.Models.ViewModels;
+using MyCourse.Models.ViewModels.Courses;
 
 namespace MyCourse.Controllers
 {

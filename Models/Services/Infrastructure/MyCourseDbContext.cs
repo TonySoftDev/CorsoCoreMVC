@@ -15,15 +15,6 @@ namespace MyCourse.Models.Services.Infrastructure
         public virtual DbSet<Course> Courses { get; set; }
         public virtual DbSet<Lesson> Lessons { get; set; }
 
-        //protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        //{
-        //    if (!optionsBuilder.IsConfigured)
-        //    {
-        //        //#warning To protect potentially sensitive information in your connection string, you should move it out of source code. See http://go.microsoft.com/fwlink/?LinkId=723263 for guidance on storing connection strings.
-        //        optionsBuilder.UseSqlite("Data Source=Data/MyCourse.db");
-        //    }
-        //}
-
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.HasAnnotation("ProductVersion", "2.2.6-servicing-10079");
@@ -99,9 +90,10 @@ namespace MyCourse.Models.Services.Infrastructure
 
             modelBuilder.Entity<Lesson>(entity =>
             {
-                entity.HasOne(lesson => lesson.Course)
-                    .WithMany(course => course.Lessons);
-
+                //entity.HasOne(lesson => lesson.Course)
+                //    .WithMany(course => course.Lessons);
+                entity.Property(lesson => lesson.RowVersion).IsRowVersion();
+                entity.Property(lesson => lesson.Order).HasDefaultValue(1000).ValueGeneratedNever();
 
                 #region MAPPING generato automaticamente
                 //entity.Property(e => e.Id).ValueGeneratedNever();
