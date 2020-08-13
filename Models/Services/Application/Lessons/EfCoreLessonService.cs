@@ -93,15 +93,15 @@ namespace MyCourse.Models.Services.Application.Lessons
             return LessonDetailViewModel.FromEntity(lesson);
         }
 
-        //public async Task DeleteLessonAsync(LessonDeleteInputModel inputModel)
-        //{
-        //    Lesson lesson = await dbContext.Lessons.FindAsync(inputModel.Id);
-        //    if (lesson == null)
-        //    {
-        //        throw new LessonNotFoundException(inputModel.Id);
-        //    }
-        //    dbContext.Remove(lesson);
-        //    await dbContext.SaveChangesAsync();
-        //}
+        public async Task DeleteLessonAsync(LessonDeleteInputModel inputModel)
+        {
+            Lesson lesson = await dbContext.Lessons.FindAsync(inputModel.Id);
+            if (lesson == null)
+            {
+                throw new LessonNotFoundException(inputModel.Id);
+            }
+            dbContext.Remove(lesson);
+            await dbContext.SaveChangesAsync();
+        }
     }
 }

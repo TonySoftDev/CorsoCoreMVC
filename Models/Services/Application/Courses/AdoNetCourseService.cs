@@ -2,6 +2,7 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MyCourse.Models.Enums;
 using MyCourse.Models.Exceptions.Application;
 using MyCourse.Models.Exceptions.Infrastructure;
 using MyCourse.Models.InputModels.Courses;
@@ -40,7 +41,7 @@ namespace MyCourse.Models.Services.Application.Courses
 
             FormattableString query = $@"SELECT Id, Title, Description, ImagePath, Author, Rating, FullPrice_Amount, 
                                                 FullPrice_Currency, CurrentPrice_Amount, CurrentPrice_Currency 
-                                        FROM Courses WHERE Id={id}; 
+                                        FROM Courses WHERE Id={id} AND Status<>{nameof(CourseStatus.Deleted)}; 
                                         SELECT Id, Title, Description, Duration FROM Lessons WHERE CourseId={id}";
             DataSet dataSet = await db.QueryAsync(query);
 
@@ -72,8 +73,9 @@ namespace MyCourse.Models.Services.Application.Courses
 
             FormattableString query = $@"SELECT Id, Title, ImagePath, Author, Rating, FullPrice_Amount, 
                                                 FullPrice_Currency, CurrentPrice_Amount, CurrentPrice_Currency FROM Courses
-                                         WHERE Title LIKE {"%" + model.Search + "%"} ORDER BY {(Sql) orderby} {(Sql) direction} LIMIT {model.Limit} OFFSET {model.Offset};
-                                         SELECT COUNT(*) FROM Courses WHERE Title LIKE {"%" + model.Search + "%"}";
+                                         WHERE Title LIKE {"%" + model.Search + "%"} AND Status<>{nameof(CourseStatus.Deleted)}
+                                         ORDER BY {(Sql) orderby} {(Sql) direction} LIMIT {model.Limit} OFFSET {model.Offset};
+                                         SELECT COUNT(*) FROM Courses WHERE Title LIKE {"%" + model.Search + "%"} AND Status<>{nameof(CourseStatus.Deleted)}";
             DataSet dataSet = await db.QueryAsync(query);
             var dataTable = dataSet.Tables[0];
             var courseList = new List<CourseViewModel>();
@@ -95,7 +97,7 @@ namespace MyCourse.Models.Services.Application.Courses
         public async Task<CourseEditInputModel> GetCourseForEditingAsync(int id)
         {
             FormattableString query = $@"SELECT Id, Title, Description, ImagePath, Email, FullPrice_Amount, FullPrice_Currency, CurrentPrice_Amount, CurrentPrice_Currency, RowVersion 
-                                         FROM Courses WHERE Id={id}";
+                                         FROM Courses WHERE Id={id} AND Status<>{nameof(CourseStatus.Deleted)}";
 
             DataSet dataSet = await db.QueryAsync(query);
 
@@ -150,8 +152,8 @@ namespace MyCourse.Models.Services.Application.Courses
                 //                                     SELECT last_insert_rowid();"
                 //                                     );
                 //int courseId = Convert.ToInt32(dataSet.Tables[0].Rows[0][0]);
-                int courseId = await db.QueryScalarAsync<int>($@"INSERT INTO Courses (Title, Author, ImagePath, CurrentPrice_Currency, CurrentPrice_Amount, FullPrice_Currency, FullPrice_Amount)
-                                                                 VALUES ({title}, {author}, '/Courses/default.png', 'EUR', 0, 'EUR', 0);
+                int courseId = await db.QueryScalarAsync<int>($@"INSERT INTO Courses (Title, Author, ImagePath, CurrentPrice_Currency, CurrentPrice_Amount, FullPrice_Currency, FullPrice_Amount, Status)
+                                                                 VALUES ({title}, {author}, '/Courses/default.png', 'EUR', 0, 'EUR', 0, {nameof(CourseStatus.Draft)});
                                                                  SELECT last_insert_rowid();"
                                                              );
 
@@ -177,10 +179,10 @@ namespace MyCourse.Models.Services.Application.Courses
                                                                    CurrentPrice_Currency={inputModel.CurrentPrice.Currency}, CurrentPrice_Amount={inputModel.CurrentPrice.Amount}, 
                                                                    FullPrice_Currency={inputModel.FullPrice.Currency}, FullPrice_Amount={inputModel.FullPrice.Amount},
                                                                    ImagePath=COALESCE({imagePath}, ImagePath)
-                                                 WHERE Id={inputModel.Id} AND RowVersion={inputModel.RowVersion}");
+                                                 WHERE Id={inputModel.Id} AND Status<>{nameof(CourseStatus.Deleted)} AND RowVersion={inputModel.RowVersion}");
                 if(affectedRows==0)
                 {
-                    bool courseExists = await db.QueryScalarAsync<bool>($"SELECT COUNT(*) FROM Courses WHERE Id={inputModel.Id}");
+                    bool courseExists = await db.QueryScalarAsync<bool>($"SELECT COUNT(*) FROM Courses WHERE Id={inputModel.Id} AND Status<>{nameof(CourseStatus.Deleted)}");
                     if (courseExists)
                     {
                         throw new OptimisticConcurrencyException();
@@ -213,5 +215,13 @@ namespace MyCourse.Models.Services.Application.Courses
             //return titleAvailable;
         }
 
+        public async Task DeleteCourseAsync(CourseDeleteInputModel inputModel)
+        {
+            int affectedRows = await this.db.CommandAsync($"UPDATE Courses SET Status={nameof(CourseStatus.Deleted)} WHERE Id={inputModel.Id} AND Status<>{nameof(CourseStatus.Deleted)}");
+            if (affectedRows == 0)
+            {
+                throw new CourseNotFoundException(inputModel.Id);
+            }
+        }
     }
 }

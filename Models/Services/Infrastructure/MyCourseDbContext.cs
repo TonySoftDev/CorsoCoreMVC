@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using MyCourse.Models.Entities;
+using MyCourse.Models.Enums;
 
 namespace MyCourse.Models.Services.Infrastructure
 {
@@ -26,6 +27,7 @@ namespace MyCourse.Models.Services.Infrastructure
 
                 entity.HasIndex(course => course.Title).IsUnique();
                 entity.Property(course => course.RowVersion).IsRowVersion();
+                entity.Property(course => course.Status).HasConversion<string>();
 
                 entity.OwnsOne(course => course.CurrentPrice, builder => {
                     builder.Property(money => money.Currency)
@@ -40,10 +42,13 @@ namespace MyCourse.Models.Services.Infrastructure
                     builder.Property(money => money.Currency).HasConversion<string>();
                 });
 
+                //Mapping per le relazioni
                 entity.HasMany(course => course.Lessons)
                     .WithOne(lesson => lesson.Course)
-                    .HasForeignKey(lesson => lesson.CourseId); 
+                    .HasForeignKey(lesson => lesson.CourseId);
 
+                //Global Query Filter
+                entity.HasQueryFilter(course => course.Status != CourseStatus.Deleted);
 
                 #region MAPPING generato automaticamente
                 //entity.Property(e => e.Id).ValueGeneratedNever();

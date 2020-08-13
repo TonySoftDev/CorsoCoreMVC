@@ -74,12 +74,12 @@ namespace MyCourse.Controllers
             return View(inputModel);
         }
 
-        //[HttpPost]
-        //public async Task<IActionResult> Delete(LessonDeleteInputModel inputModel)
-        //{
-        //    await lessonService.DeleteLessonAsync(inputModel);
-        //    TempData["ConfirmationMessage"] = "La lezione è stata eliminata";
-        //    return RedirectToAction(nameof(CoursesController.Detail), "Courses", new { id = inputModel.CourseId });
-        //}
+        [HttpPost]
+        public async Task<IActionResult> Delete(LessonDeleteInputModel inputModel)
+        {
+            await lessonService.DeleteLessonAsync(inputModel);
+            TempData["ConfirmationMessage"] = "La lezione è stata eliminata";
+            return RedirectToAction(nameof(CoursesController.Detail), "Courses", new { id = inputModel.CourseId });
+        }
     }
 }

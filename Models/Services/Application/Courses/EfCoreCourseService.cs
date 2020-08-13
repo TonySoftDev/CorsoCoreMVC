@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MyCourse.Models.Entities;
+using MyCourse.Models.Enums;
 using MyCourse.Models.Exceptions.Application;
 using MyCourse.Models.InputModels.Courses;
 using MyCourse.Models.Options;
@@ -282,5 +283,19 @@ namespace MyCourse.Models.Services.Application.Courses
 
             return viewModel;
         }
+
+        public async Task DeleteCourseAsync(CourseDeleteInputModel inputModel)
+        {
+            Course course = await dbContext.Courses.FindAsync(inputModel.Id);
+
+            if (course == null)
+            {
+                throw new CourseNotFoundException(inputModel.Id);
+            }
+
+            course.ChangeStatus(CourseStatus.Deleted);
+            await dbContext.SaveChangesAsync();
+        }
+
     }
 }
