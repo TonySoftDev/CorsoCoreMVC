@@ -2,15 +2,17 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MyCourse.Models.Services.Infrastructure;
 
 namespace MyCourse.Migrations
 {
     [DbContext(typeof(MyCourseDbContext))]
-    partial class MyCourseDbContextModelSnapshot : ModelSnapshot
+    [Migration("20200917013327_IdentityApplicationUser")]
+    partial class IdentityApplicationUser
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -224,9 +226,6 @@ namespace MyCourse.Migrations
                     b.Property<string>("Author")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("AuthorId")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("Description")
                         .HasColumnType("TEXT");
 
@@ -252,8 +251,6 @@ namespace MyCourse.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("AuthorId");
 
                     b.HasIndex("Title")
                         .IsUnique();
@@ -348,10 +345,6 @@ namespace MyCourse.Migrations
 
             modelBuilder.Entity("MyCourse.Models.Entities.Course", b =>
                 {
-                    b.HasOne("MyCourse.Models.Entities.ApplicationUser", "AuthorUser")
-                        .WithMany("AuthoredCourses")
-                        .HasForeignKey("AuthorId");
-
                     b.OwnsOne("MyCourse.Models.ValueTypes.Money", "CurrentPrice", b1 =>
                         {
                             b1.Property<int>("CourseId")

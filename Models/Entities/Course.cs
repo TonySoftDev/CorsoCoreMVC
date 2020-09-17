@@ -7,10 +7,10 @@ namespace MyCourse.Models.Entities
 {
     public partial class Course
     {
-        public Course(string title, string author)
+        public Course(string title, string author, string authorId)
         {
             ChangeTitle(title);
-            ChangeAuthor(author);
+            ChangeAuthor(author, authorId);
             Lessons = new HashSet<Lesson>();
             CurrentPrice = new Money(Currency.EUR, 0);
             FullPrice = new Money(Currency.EUR, 0);
@@ -28,20 +28,26 @@ namespace MyCourse.Models.Entities
         public Money CurrentPrice { get; private set; }
         public string RowVersion { get; private set; }
         public CourseStatus Status { get; private set; }
-
+        public string AuthorId { get; set; }
+        public virtual ApplicationUser AuthorUser { get; set; }
         public void ChangeStatus(CourseStatus newStatus)
         {
             //TODO: aggiungere logica di validazione
             Status = newStatus;
         }
 
-        public void ChangeAuthor(string newAuthor)
+        public void ChangeAuthor(string newAuthor, string newAuthorId)
         {
             if (string.IsNullOrWhiteSpace(newAuthor))
             {
                 throw new ArgumentException("The author must have a name");
             }
+            if (string.IsNullOrWhiteSpace(newAuthorId))
+            {
+                throw new ArgumentException("The author must have a id");
+            }
             Author = newAuthor;
+            AuthorId = newAuthorId;
         }
 
         public void ChangeTitle(string newTitle)

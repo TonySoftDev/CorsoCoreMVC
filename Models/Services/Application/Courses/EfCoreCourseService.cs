@@ -1,4 +1,5 @@
-﻿using Microsoft.Data.Sqlite;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -13,6 +14,7 @@ using MyCourse.Models.ViewModels.Courses;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace MyCourse.Models.Services.Application.Courses
@@ -23,19 +25,22 @@ namespace MyCourse.Models.Services.Application.Courses
         private readonly MyCourseDbContext dbContext;
         private readonly IImagePersister imagePersister;
         private readonly IOptionsMonitor<CoursesOptions> coursesOptions;
+        private readonly IHttpContextAccessor httpContextAccessor;
 
-        public EfCoreCourseService(ILogger<EfCoreCourseService> logger, MyCourseDbContext dbContext, IImagePersister imagePersister, IOptionsMonitor<CoursesOptions> coursesOptions)
+        public EfCoreCourseService(ILogger<EfCoreCourseService> logger, MyCourseDbContext dbContext, IImagePersister imagePersister, IOptionsMonitor<CoursesOptions> coursesOptions,
+            IHttpContextAccessor httpContextAccessor)
         {
             this.logger = logger;
             this.dbContext = dbContext;
             this.imagePersister = imagePersister;
             this.coursesOptions = coursesOptions;
+            this.httpContextAccessor = httpContextAccessor;
         }
 
         public async Task<CourseDetailViewModel> GetCourseAsync(int id)
         {
             IQueryable<CourseDetailViewModel> queryLinq = dbContext.Courses
-                .AsNoTracking()
+                //.AsNoTracking()
                 .Include(course => course.Lessons)
                 .Where(course => course.Id == id)
                 .Select(course => CourseDetailViewModel.FromEntity(course)); //Usando metodi statici come FromEntity, la query potrebbe essere inefficiente. Mantenere il mapping nella lambda oppure usare un extension method personalizzato
@@ -171,8 +176,8 @@ namespace MyCourse.Models.Services.Application.Courses
             };
 
             IQueryable<Course> queryLinq = baseQuery
-                .Where(course => course.Title.Contains(model.Search))
-                .AsNoTracking();
+                .Where(course => course.Title.Contains(model.Search));
+                //.AsNoTracking();
 
             List<CourseViewModel> courses = await queryLinq
                 .Skip(model.Offset)
@@ -194,9 +199,19 @@ namespace MyCourse.Models.Services.Application.Courses
         public async Task<CourseDetailViewModel> CreateCourseAsync(CourseCreateInputModel inputModel)
         {
             string title = inputModel.Title;
-            string author = "Mario Rossi";
+            string author = string.Empty;
+            string authorId = string.Empty;
+            try
+            {
+                author = httpContextAccessor.HttpContext.User.FindFirst("FullName").Value;
+                authorId = httpContextAccessor.HttpContext.User.FindFirst(ClaimTypes.NameIdentifier).Value;
+            }
+            catch (NullReferenceException)
+            {
+                throw new UserUnknownException();
+            }
 
-            var course = new Course(title, author);
+            var course = new Course(title, author, authorId);
             dbContext.Add(course);
             try
             {
@@ -269,7 +284,7 @@ namespace MyCourse.Models.Services.Application.Courses
         public async Task<CourseEditInputModel> GetCourseForEditingAsync(int id)
         {
             IQueryable<CourseEditInputModel> queryLinq = dbContext.Courses
-                .AsNoTracking()
+                //.AsNoTracking()
                 .Where(course => course.Id == id)
                 .Select(course => CourseEditInputModel.FromEntity(course)); //Usando metodi statici come FromEntity, la query potrebbe essere inefficiente. Mantenere il mapping nella lambda oppure usare un extension method personalizzato
 
