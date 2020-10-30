@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.EntityFrameworkCore;
@@ -56,6 +57,26 @@ namespace MyCourse
 #endif
             ;
 
+            var identityBuilder = services.AddDefaultIdentity<ApplicationUser>(options => {
+                options.Password.RequireDigit = true;
+                options.Password.RequiredLength = 8;
+                options.Password.RequireUppercase = true;
+                options.Password.RequireLowercase = true;
+                options.Password.RequireNonAlphanumeric = true;
+                options.Password.RequiredUniqueChars = 4;
+
+                //Conferma dell'account
+                options.SignIn.RequireConfirmedAccount = true;
+
+                //Blocco dell'account
+                options.Lockout.AllowedForNewUsers = true;
+                options.Lockout.MaxFailedAccessAttempts = 5;
+                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
+
+            })
+                .AddClaimsPrincipalFactory<CustomClaimPrincipalFactory>()
+                .AddPasswordValidator<CommonPasswordValidator<ApplicationUser>>();
+
             //Usiamo ADO.NET o Entity Framework Core per l'accesso ai dati?
             var persistence = Persistence.EfCore;
             switch (persistence)
@@ -64,20 +85,13 @@ namespace MyCourse
                     services.AddTransient<ICourseService, AdoNetCourseService>();
                     services.AddTransient<ILessonService, AdoNetLessonService>();
                     services.AddTransient<IDatabaseAccessor, SqliteDatabaseAccessor>();
+
+                    identityBuilder.AddUserStore<AdoNetUserStore>();
                     break;
 
                 case Persistence.EfCore:
-                    services.AddDefaultIdentity<ApplicationUser>(options => {
-                        options.Password.RequireDigit = true;
-                        options.Password.RequiredLength = 8;
-                        options.Password.RequireUppercase = true;
-                        options.Password.RequireLowercase = true;
-                        options.Password.RequireNonAlphanumeric = true;
-                        options.Password.RequiredUniqueChars = 4;
-                    })
-                        .AddClaimsPrincipalFactory<CustomClaimPrincipalFactory>()
-                        .AddPasswordValidator<CommonPasswordValidator<ApplicationUser>>()
-                        .AddEntityFrameworkStores<MyCourseDbContext>();
+                    identityBuilder.AddEntityFrameworkStores<MyCourseDbContext>();
+
                     services.AddTransient<ICourseService, EfCoreCourseService>();
                     services.AddTransient<ILessonService, EfCoreLessonService>();
                     services.AddDbContextPool<MyCourseDbContext>(optionsBuilder => {
@@ -90,12 +104,14 @@ namespace MyCourse
             services.AddTransient<ICachedCourseService, MemoryCacheCourseService>();
             services.AddTransient<ICachedLessonService, MemoryCacheLessonService>();
             services.AddSingleton<IImagePersister, MagickNetImagePersister>();
+            services.AddSingleton<IEmailSender, MailKitEmailSender>();
 
             //Options
             services.Configure<ConnectionStringsOptions>(Configuration.GetSection("ConnectionStrings"));
             services.Configure<CoursesOptions>(Configuration.GetSection("Courses"));
             services.Configure<MemoryCacheOptions>(Configuration.GetSection("MemoryCache"));
             services.Configure<KestrelServerOptions>(Configuration.GetSection("Kestrel"));
+            services.Configure<SmtpOptions>(Configuration.GetSection("Smtp"));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

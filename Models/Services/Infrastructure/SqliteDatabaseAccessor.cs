@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MyCourse.Models.Services.Infrastructure
@@ -24,7 +25,7 @@ namespace MyCourse.Models.Services.Infrastructure
             this.connectionStringOptions = connectionStringOptions;
         }
 
-        public async Task<int> CommandAsync(FormattableString formattableCommand)
+        public async Task<int> CommandAsync(FormattableString formattableCommand, CancellationToken token)
         {
             try
             {
@@ -39,7 +40,7 @@ namespace MyCourse.Models.Services.Infrastructure
             }
         }
 
-        public async Task<T> QueryScalarAsync<T>(FormattableString formattableQuery)
+        public async Task<T> QueryScalarAsync<T>(FormattableString formattableQuery, CancellationToken token)
         {
             try
             {
@@ -54,7 +55,7 @@ namespace MyCourse.Models.Services.Infrastructure
             }
         }
 
-        public async Task<DataSet> QueryAsync(FormattableString formattableQuery)
+        public async Task<DataSet> QueryAsync(FormattableString formattableQuery, CancellationToken token)
         {
             logger.LogInformation(formattableQuery.Format, formattableQuery.GetArguments());
 
